@@ -83,3 +83,70 @@ cdklocal destroy
 
 localstack stop
 
+
+pip install localstack awscli-local
+npm install -g aws-cdk
+
+
+cdk.json
+{
+  "app": "npx ts-node bin/sns-eventbridge-sqs.ts",
+  "context": {
+    "aws-cdk:enableDiffNoFail": "true",
+    "aws-cdk:use-localstack": true
+  }
+}
+
+
+npm install -g aws-cdk-local
+
+cdklocal bootstrap
+cdklocal deploy
+
+
+localstack start
+
+
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_DEFAULT_REGION=us-east-1
+export EDGE_PORT=4566
+export AWS_ENDPOINT_URL=http://localhost:4566
+
+cdklocal deploy
+
+
+awslocal sns list-topics
+awslocal sqs list-queues
+awslocal lambda list-functions
+awslocal events list-event-buses
+
+TOPIC_ARN=$(awslocal sns list-topics --query 'Topics[0].TopicArn' --output text)
+
+awslocal sns publish \
+  --topic-arn "$TOPIC_ARN" \
+  --message '{"userId": 123, "action": "created"}' \
+  --message-attributes '{"source":{"DataType":"String","StringValue":"custom.sns.source"}}'
+
+
+  aws sns publish \
+  --topic-arn arn:aws:sns:us-east-1:000000000000:topic-9d42a22a \
+  --message '{
+    "userId": "12345",
+    "action": "login",
+    "timestamp": "2025-07-30T18:22:00Z"
+  }' \
+  --message-attributes '{"source": {"DataType": "String", "StringValue": "custom.sns.source"}}'
+
+
+
+QUEUE_URL=$(awslocal sqs get-queue-url --queue-name destination-queue --query 'QueueUrl' --output text)
+
+awslocal sqs receive-message \
+  --queue-url "$QUEUE_URL" \
+  --message-attribute-names All \
+  --max-number-of-messages 1
+
+
+awslocal logs describe-log-groups
+awslocal logs describe-log-streams --log-group-name /aws/lambda/SnsToEventBridgeLambda
