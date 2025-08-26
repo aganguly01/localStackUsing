@@ -116,4 +116,90 @@ artifacts:
     - "cdk.out/**"
 
 
+//Arnab dev,qa
+
+# Bogiefile for TypeScript CDK Project - Dev & QA Environments
+
+version: "1.0"
+
+# -----------------------------
+# Project Metadata
+# -----------------------------
+vars:
+  asv: "platform"
+  ba: "cloud-infra"
+  component: "sns-eventbridge"
+  owner: "team-devops@example.com"
+  region: "us-east-1"
+  appId: "sns-eventbridge-app"
+  cost_center: "12345"
+
+# -----------------------------
+# Pipeline configuration
+# -----------------------------
+pipeline:
+  managed: true
+  flavor: infra
+  ci_server: "dev-ci-server.example.com"
+
+# -----------------------------
+# Feature toggles
+# -----------------------------
+feature_toggles:
+  always_deploy_to_qa: false
+  gitversion_enabled: false
+
+# -----------------------------
+# Tasks
+# -----------------------------
+tasks:
+  infra_as_code:
+    tool: cdk
+    nodeVersion: 22
+    chdir: "."  # root of CDK project, adjust if needed
+    install:
+      commands:
+        - echo "🔧 Installing dependencies..."
+        - npm ci
+    build:
+      commands:
+        - echo "🏗️ Building TypeScript project..."
+        - npm run build
+    synth:
+      commands:
+        - echo "📜 Synthesizing CloudFormation templates..."
+        - npx cdk synth ${stack.id}
+    deploy:
+      commands:
+        - echo "🚀 Deploying stack ${stack.id}..."
+        - npx cdk deploy --require-approval never ${stack.id}
+
+# Optional Lambda metadata (CDK handles packaging)
+  lambda_steps:
+    - name: "MyLambdaFunction"
+      chdir: "lambda-handler"
+
+# -----------------------------
+# Environments
+# -----------------------------
+environments:
+  dev:
+    aws_account_name: "123456789012"
+    stack:
+      - id: "SnsEventbridgeDevStack"
+        appId: "sns-eventbridge"
+        owner: "team-devops@example.com"
+  qa:
+    aws_account_name: "234567890123"
+    stack:
+      - id: "SnsEventbridgeQaStack"
+        appId: "sns-eventbridge"
+        owner: "team-devops@example.com"
+
+# -----------------------------
+# Artifacts
+# -----------------------------
+artifacts:
+  files:
+    - "cdk.out/**"
 
