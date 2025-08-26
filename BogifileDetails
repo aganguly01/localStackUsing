@@ -1,0 +1,119 @@
+i# Bogiefile for TypeScript CDK Project - Dev Environment
+
+version: "1.0"
+
+environment:
+  name: dev
+  runtime: nodejs:22
+  variables:
+    NODE_ENV: development
+    CI_SERVER: "dev-ci-server.example.com"   # pipeline metadata value
+
+phases:
+  install:
+    commands:
+      - echo "🔧 Installing dependencies..."
+      - npm ci
+
+  build:
+    commands:
+      - echo "🏗️ Building TypeScript project..."
+      - npm run build
+
+  synth:
+    commands:
+      - echo "📜 Synthesizing CloudFormation templates..."
+      - npx cdk synth
+
+  deploy:
+    commands:
+      - echo "🚀 Deploying CDK app to AWS (dev)..."
+      - npx cdk deploy --require-approval never --all
+
+artifacts:
+  files:
+    - "cdk.out/**"
+
+
+# Bogiefile for TypeScript CDK Project - Dev Environment
+
+version: "1.0"
+
+environment:
+  name: dev
+  runtime: nodejs:22
+  variables:
+    NODE_ENV: development
+    CI_SERVER: "dev-ci-server.example.com"   # pipeline metadata value
+
+phases:
+  install:
+    commands:
+      - echo "🔧 Installing dependencies..."
+      - npm ci
+
+  build:
+    commands:
+      - echo "🏗️ Building TypeScript project..."
+      - npm run build
+
+  synth:
+    commands:
+      - echo "📜 Synthesizing CloudFormation templates..."
+      - npx cdk synth MyDevStack
+
+  deploy:
+    commands:
+      - echo "🚀 Deploying MyDevStack to AWS (dev)..."
+      - npx cdk deploy --require-approval never MyDevStack
+
+artifacts:
+  files:
+    - "cdk.out/**"
+
+//Arnab
+
+# Bogiefile for TypeScript CDK Project - Dev Environment
+
+version: "1.0"
+
+vars:
+  asv: "platform"                # Example Application Service Vertical
+  ba: "cloud-infra"              # Example Business Area
+  component: "sns-eventbridge"   # Component/Project name
+  owner: "team-devops@example.com"  # Owner/team email or group
+
+pipeline:
+  managed: true
+  flavor: infra                  # pipeline type (infra for IaC/CDK projects)
+  ci_server: "dev-ci-server.example.com"
+
+feature_toggles:
+  always_deploy_to_qa: false
+  gitversion_enabled: false
+
+tasks:
+  infra_as_code:
+    install:
+      commands:
+        - echo "🔧 Installing dependencies..."
+        - npm ci
+    build:
+      commands:
+        - echo "🏗️ Building TypeScript project..."
+        - npm run build
+    synth:
+      commands:
+        - echo "📜 Synthesizing CloudFormation templates..."
+        - npx cdk synth SnsEventbridgeDevStack
+    deploy:
+      commands:
+        - echo "🚀 Deploying SnsEventbridgeDevStack to AWS (dev)..."
+        - npx cdk deploy --require-approval never SnsEventbridgeDevStack
+
+artifacts:
+  files:
+    - "cdk.out/**"
+
+
+
