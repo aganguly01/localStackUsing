@@ -1,0 +1,183 @@
+//Arnab 1
+<dependency>
+  <groupId>org.mockito</groupId>
+  <artifactId>mockito-inline</artifactId>
+  <version>5.13.0</version> <!-- latest -->
+  <scope>test</scope>
+</dependency>
+
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mockStatic;
+
+class FreshnessServiceATDDTest {
+
+    private final FreshnessService service = new FreshnessService();
+
+    @Test
+    void freshnessBehaviorOverTime() {
+        Instant start = Instant.parse("2025-08-19T00:00:00Z");
+
+        // First call at T0
+        try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+            mocked.when(Instant::now).thenReturn(start);
+
+            String v1 = service.functionCall();
+            String v2 = service.functionCall();
+
+            // both calls same value
+            assertThat(v2).isEqualTo(v1);
+        }
+
+        // Second call within 60 days (simulate +30d)
+        try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+            mocked.when(Instant::now).thenReturn(start.plus(30, ChronoUnit.DAYS));
+
+            String v3 = service.functionCall();
+
+            // within 60 days → value should still be same as v1
+            assertThat(v3).isEqualTo(service.functionCall());
+        }
+
+        // Third call after expiration (simulate +61d)
+        try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+            mocked.when(Instant::now).thenReturn(start.plus(61, ChronoUnit.DAYS));
+
+            String v4 = service.functionCall();
+
+            // after 60 days → value should change
+            assertThat(v4).isNotEqualTo(service.functionCall()); // simulate refresh
+        }
+    }
+}
+
+
+
+<dependency>
+  <groupId>org.mockito</groupId>
+  <artifactId>mockito-core</artifactId>
+  <version>5.11.0</version>
+  <scope>test</scope>
+</dependency>
+
+import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import java.time.Instant;
+
+class DynamoExpiryTest {
+
+    @Test
+    void testExpiryLogic() {
+        // Define the sequence of Instants you want to simulate
+        Instant first = Instant.now(); // "today"
+        Instant after30days = first.plusSeconds(30L * 24 * 60 * 60);
+        Instant after61days = first.plusSeconds(61L * 24 * 60 * 60);
+
+        try (MockedStatic<Instant> mockedNow = mockStatic(Instant.class)) {
+            // 1st call → "today"
+            mockedNow.when(Instant::now).thenReturn(first);
+
+            // Code under test executes using Instant.now()
+            System.out.println("Run 1: " + Instant.now());
+
+            // 2nd call → +30 days
+            mockedNow.when(Instant::now).thenReturn(after30days);
+            System.out.println("Run 2: " + Instant.now());
+
+            // 3rd call → +61 days
+            mockedNow.when(Instant::now).thenReturn(after61days);
+            System.out.println("Run 3: " + Instant.now());
+        }
+    }
+}
+
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import java.time.Instant;
+
+import static org.mockito.Mockito.mockStatic;
+import static org.assertj.core.api.Assertions.assertThat;
+
+class MyServiceTest {
+
+    @Test
+    void testWithin60Days() {
+        try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+            Instant fixedNow = Instant.now(); // today's real date
+            mocked.when(Instant::now).thenReturn(fixedNow);
+
+            MyService service = new MyService();
+            boolean result = service.isExpired(fixedNow.minusSeconds(59L * 24 * 3600)); // 59 days ago
+
+            assertThat(result).isFalse(); // not expired yet
+        }
+    }
+
+    @Test
+    void testExactly60Days() {
+        try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+            Instant fixedNow = Instant.now();
+            mocked.when(Instant::now).thenReturn(fixedNow);
+
+            MyService service = new MyService();
+            boolean result = service.isExpired(fixedNow.minusSeconds(60L * 24 * 3600)); // exactly 60 days ago
+
+            assertThat(result).isTrue(); // expired
+        }
+    }
+
+    @Test
+    void testBeyond60Days() {
+        try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+            Instant fixedNow = Instant.now();
+            mocked.when(Instant::now).thenReturn(fixedNow);
+
+            MyService service = new MyService();
+            boolean result = service.isExpired(fixedNow.minusSeconds(61L * 24 * 3600)); // 61 days ago
+
+            assertThat(result).isTrue(); // expired
+        }
+    }
+}
+
+try (MockedStatic<Instant> mocked = mockStatic(Instant.class)) {
+    Instant baseline = Instant.now(); // "today" at test runtime
+
+    // 1st call → baseline
+    mocked.when(Instant::now).thenReturn(baseline);
+    mainCode.call(); // main code sees "now" = baseline
+
+    // 2nd call → baseline + 30 days (within 60-day freshness)
+    mocked.when(Instant::now).thenReturn(baseline.plusSeconds(30L * 24 * 60 * 60));
+    mainCode.call(); // main code sees "now" 30 days later → values may still be fresh
+
+    // 3rd call → baseline + 61 days (expired)
+    mocked.when(Instant::now).thenReturn(baseline.plusSeconds(61L * 24 * 60 * 60));
+    mainCode.call(); // main code sees "now" 61 days later → values change
+}
+
+<dependency>
+  <groupId>org.mockito</groupId>
+  <artifactId>mockito-inline</artifactId>
+  <version>5.13.0</version>
+  <scope>test</scope>
+</dependency>
+
+
+<dependency>
+  <groupId>org.mockito</groupId>
+  <artifactId>mockito-core</artifactId>
+  <version>5.11.0</version>
+  <scope>test</scope>
+</dependency>
+
+
+
