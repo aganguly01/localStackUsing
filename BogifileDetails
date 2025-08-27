@@ -203,3 +203,88 @@ artifacts:
   files:
     - "cdk.out/**"
 
+#For bogie testing
+
+1️⃣ Using bogie-cli or local pipeline runner (if available)
+
+Many organizations provide a Bogie CLI that can run the pipeline locally, simulating the CI/CD environment. Steps:
+
+Install the CLI (if your org provides it).
+
+Run the pipeline for a specific environment:
+
+# Example
+bogie run --env dev --task infra_as_code
+
+
+This will execute your install, build, synth, and deploy commands exactly as the CI/CD would.
+
+It respects chdir, nodeVersion, tool, etc.
+
+✅ Pros: Closest to actual pipeline behavior.
+❌ Cons: Requires the org’s CLI and config files.
+
+2️⃣ Manual local testing
+
+If you don’t have a local Bogie runner, you can still test the CDK commands directly:
+
+Go to your project folder (respect chdir if used):
+
+cd /path/to/your/cdk/project
+
+
+Install dependencies:
+
+npm ci
+
+
+Build TypeScript:
+
+npm run build
+
+
+Synth the stack (replace with your stack ID):
+
+npx cdk synth SnsEventbridgeDevStack
+
+
+This will generate CloudFormation templates in cdk.out/.
+
+If it succeeds, your stack is syntactically correct.
+
+Deploy to dev account (optional — be careful!):
+
+npx cdk deploy --require-approval never SnsEventbridgeDevStack
+
+
+This simulates what the Bogie pipeline would do.
+
+✅ Pros: Works anywhere, no org CLI needed.
+❌ Cons: Doesn’t test pipeline-level features like vars, feature_toggles, or automatic environment selection.
+
+3️⃣ Optional: dry-run / synth-only approach
+
+To avoid actually deploying resources, you can just run:
+
+npx cdk synth
+
+
+This ensures all stacks compile correctly and outputs the templates.
+
+Useful for validating the Bogiefile commands locally before hitting real AWS accounts.
+
+💡 Tip: You can even wrap the commands in a local shell script mimicking the Bogiefile tasks:
+
+#!/bin/bash
+set -e
+cd .
+npm ci
+npm run build
+npx cdk synth SnsEventbridgeDevStack
+# npx cdk deploy --require-approval never SnsEventbridgeDevStack
+
+
+Comment out deploy for dry-run.
+
+Works as a local test harness for your Bogiefile.
+
