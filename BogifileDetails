@@ -288,3 +288,190 @@ Comment out deploy for dry-run.
 
 Works as a local test harness for your Bogiefile.
 
+
+//Latest multiRegion
+
+version: "1.0"
+
+vars:
+  app: "my-stack"        # common application name
+  region: "east"          # default region if not overridden
+
+pipeline:
+  managed: true
+  flavor: infra
+  ci_server: "dev-ci-server.example.com"
+
+feature_toggles:
+  always_deploy_to_qa: false
+  gitversion_enabled: false
+
+tasks:
+  infra_as_code:
+    tool: cdk
+    nodeVersion: 22
+    chdir: "."
+    install:
+      commands:
+        - npm ci
+        - cd lambda-handler && npm ci && cd ..
+    build:
+      commands:
+        - npm run build
+        - cd lambda-handler && npm run build && cd ..
+    synth:
+      commands:
+        - npx cdk synth ${stack.id}
+    deploy:
+      commands:
+        - npx cdk deploy --require-approval never ${stack.id}
+
+environments:
+
+  dev:
+    vars:
+      env: "dev"
+      region: "east"
+    aws_account_name: "123456789012"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+  qa:
+    vars:
+      env: "qa"
+      region: "east"
+    aws_account_name: "234567890123"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+  prod:
+    vars:
+      env: "prod"
+      region: "west"
+    aws_account_name: "345678901234"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+
+
+multiregions
+version: "1.0"
+
+vars:
+  app: "my-stack"        # common application name
+
+pipeline:
+  managed: true
+  flavor: infra
+  ci_server: "dev-ci-server.example.com"
+
+feature_toggles:
+  always_deploy_to_qa: false
+  gitversion_enabled: false
+
+tasks:
+  infra_as_code:
+    tool: cdk
+    nodeVersion: 22
+    chdir: "."
+    install:
+      commands:
+        - npm ci
+        - cd lambda-handler && npm ci && cd ..
+    build:
+      commands:
+        - npm run build
+        - cd lambda-handler && npm run build && cd ..
+    synth:
+      commands:
+        - npx cdk synth ${stack.id}
+    deploy:
+      commands:
+        - npx cdk deploy --require-approval never ${stack.id}
+
+environments:
+
+  dev-east:
+    vars:
+      env: "dev"
+      region: "east"
+    aws_account_name: "123456789012"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+  dev-west:
+    vars:
+      env: "dev"
+      region: "west"
+    aws_account_name: "123456789012"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+  qa-east:
+    vars:
+      env: "qa"
+      region: "east"
+    aws_account_name: "234567890123"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+  prod-west:
+    vars:
+      env: "prod"
+      region: "west"
+    aws_account_name: "345678901234"
+    stack:
+      - id: "${app}-${env}-${region}"
+
+
+bogie deploy --env dev-east
+bogie deploy --env dev-west
+
+#!/usr/bin/env node
+import * as cdk from "aws-cdk-lib";
+import { SnsEventbridgeSqsStack } from "../lib/sns-eventbridge-sqs-stack";
+
+const app = new cdk.App();
+
+// Pull values from context (set via --context in CDK CLI or from Bogie/CI)
+const appName = app.node.tryGetContext("app") || "my-stack";
+const envName = app.node.tryGetContext("env") || "dev";
+const regionName = app.node.tryGetContext("region") || "east";
+
+// Construct the stack ID dynamically
+const stackId = `${appName}-${envName}-${regionName}`;
+
+// Define AWS account (optional: can also come from context)
+const account = process.env.CDK_DEFAULT_ACCOUNT || "<aws-account-id>";
+
+// Instantiate the stack
+new SnsEventbridgeSqsStack(app, stackId, {
+  env: {
+    account: account,
+    region: `us-${regionName}-1`, // adjust if your region naming differs
+  },
+});
+
+
+const appName = app.node.tryGetContext("app") || "my-stack";
+const envName = app.node.tryGetContext("env") || "dev";
+const regionName = app.node.tryGetContext("region") || "east";
+const accountId = app.node.tryGetContext("account") || process.env.CDK_DEFAULT_ACCOUNT;
+
+const stackId = `${appName}-${envName}-${regionName}`;
+
+new SnsEventbridgeSqsStack(app, stackId, {
+  env: {
+    account: accountId,
+    region: `us-${regionName}-1`,
+  },
+});
+
+
+npx cdk deploy \
+  --context app=my-stack \
+  --context env=dev \
+  --context region=east \
+  --context account=123456789012
+
+
