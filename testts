@@ -1,0 +1,137 @@
+npm run test
+
+test/sns-eventbridge-sqs.test.ts
+import * as cdk from 'aws-cdk-lib';
+import { Template } from 'aws-cdk-lib/assertions';
+import { SnsEventbridgeSqsStack } from '../lib/sns-eventbridge-sqs-stack';
+
+test('SNS Topic, EventBridge Rule, SQS Queue, and JSON Transformation', () => {
+  const app = new cdk.App();
+  const stack = new SnsEventbridgeSqsStack(app, 'TestStack');
+
+  const template = Template.fromStack(stack);
+
+  // 1️⃣ Assert SNS Topic exists
+  template.hasResourceProperties('AWS::SNS::Topic', {});
+
+  // 2️⃣ Assert SQS Queue exists
+  template.hasResourceProperties('AWS::SQS::Queue', {});
+
+  // 3️⃣ Assert Lambda function exists (if you have one)
+  template.resourceCountIs('AWS::Lambda::Function', 1);
+
+  // 4️⃣ Assert EventBridge Rule exists
+  template.hasResourceProperties('AWS::Events::Rule', {
+    EventPattern: {
+      source: ["aws.sns"],  // replace with your actual source if different
+    }
+  });
+
+  // 5️⃣ Assert EventBridge JSON transformation is correct
+  template.hasResourceProperties('AWS::Events::Rule', {
+    Targets: [
+      {
+        Arn: { "Fn::GetAtt": ["YourQueueLogicalId", "Arn"] }, // replace with your queue logical ID
+        InputTransformer: {
+          InputPathsMap: {
+            id: "$.detail.id",
+            message: "$.detail.message"
+          },
+          InputTemplate: '{"id":"<$.id>","message":"<$.message>"}'
+        }
+      }
+    ]
+  });
+});
+
+
+test/lambda-handler.test.ts
+
+import { handler } from '../lambda-handler/index';
+
+test('Lambda transforms SNS event and forwards correctly', async () => {
+  // Mock SNS event
+  const event = {
+    Records: [
+      {
+        Sns: {
+          Message: JSON.stringify({ userId: '123', action: 'created' }),
+        },
+      },
+    ],
+  };
+
+  // Mock EventBridge client
+  const putEventsMock = jest.fn().mockReturnValue({ promise: () => Promise.resolve() });
+  jest.mock('aws-sdk', () => ({
+    EventBridge: jest.fn(() => ({ putEvents: putEventsMock })),
+  }));
+
+  // Run handler
+  await handler(event);
+
+  expect(putEventsMock).toHaveBeenCalledWith(
+    expect.objectContaining({
+      Entries: expect.arrayContaining([
+        expect.objectContaining({
+          Source: 'my.sns.lambda',
+          DetailType: 'snsEvent',
+          Detail: JSON.stringify({ userId: '123', action: 'created' }),
+        }),
+      ]),
+    }),
+  );
+});
+
+
+# If not already installed
+npm install --save-dev jest ts-jest @types/jest
+
+/** @type {import('ts-jest').JestConfigWithTsJest} */
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/test/**/*.test.ts'],
+};
+
+package json
+
+"scripts": {
+  "build": "tsc",
+  "watch": "tsc -w",
+  "test": "jest"
+}
+
+tscconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",              // or ES2019+, needed for CDK
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["jest", "node"]        // 👈 Important for Jest typings
+  },
+  "include": ["bin", "lib", "test"]  // 👈 Make sure your test folder is included
+}
+
+packageconfig.json
+
+{
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",                  // 👈 Jest test runner
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "jest": "^29.x",
+    "ts-jest": "^29.x",
+    "@types/jest": "^29.x",
+    "typescript": "^5.x",
+    "aws-cdk-lib": "2.x",
+    "constructs": "^10.x"
+  }
+}
+
